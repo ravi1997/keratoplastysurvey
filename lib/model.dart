@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'package:uuid/uuid.dart';
+
 import 'package:keratoplastysurvey/configuration.dart';
 import 'package:keratoplastysurvey/util.dart';
 
@@ -77,7 +76,7 @@ List<Map<String, String>> getValueRange(name, values) {
   String myname;
 
   if (name == null) {
-    myname = const Uuid().v4();
+    myname = myuuid.v4();
   } else {
     myname = name;
   }
@@ -98,7 +97,7 @@ List<String> getValueRangeList(valueRange) {
 }
 
 class Question {
-  int? questionID;
+  String? questionID = myuuid.v4();
   String question;
   String variable;
   String? hint;
@@ -114,7 +113,7 @@ class Question {
   String? valueRangeName;
 
   Question(
-      {this.questionID,
+      {questionID,
       required this.question,
       required this.variable,
       this.hint,
@@ -127,9 +126,10 @@ class Question {
       required this.type,
       required this.valueType,
       this.valueRangeName,
-      required this.valueRange});
+      required this.valueRange}):questionID=(questionID==null)?myuuid.v4():questionID;
 
   factory Question.fromJson(Map<String, dynamic> json) {
+    print(json['constraint']);
     return Question(
       questionID: json['questionID'],
       question: json['question'],
@@ -138,16 +138,21 @@ class Question {
       required: json['required'],
       visibilityCondition: (json['visibilityCondition'] == null)
           ? null
-          : getCondition(json['visibilityCondition']),
+          : (json['visibilityCondition']['condition'] == null)
+              ? null
+              : getCondition(json['visibilityCondition']['condition']),
       constraint: (json['constraint'] == null)
           ? null
-          : getCondition(json['constraint']),
+          : (json['constraint']['condition'] == null)
+              ? null
+              : getCondition(json['constraint']['condition']),
       constraintMessage: json['constraintMessage'],
       defaultValue: json['defaultValue'],
       lastSaved: json['lastSaved'],
       type: QuestionType.fromJson(json['type']),
       valueType: json['valueType'],
-      valueRangeName: json['valueRange']['name'],
+      valueRangeName:
+          (json['valueRange'].length > 0) ? json['valueRange']['name'] : "",
       valueRange: getValueRangeList(json['valueRange']),
     );
   }
@@ -244,7 +249,7 @@ enum SurveyStatus {
 }
 
 class Survey {
-  String? surveyID = uuid.v1();
+  String? surveyID = myuuid.v1();
   String surveyName;
   String description;
   List<Section> sections;
@@ -253,14 +258,14 @@ class Survey {
   DateTime activeTill;
 
   Survey({
-    this.surveyID,
+    surveyID,
     required this.surveyName,
     required this.description,
     required this.sections,
     required this.createAt,
     required this.activeFrom,
     required this.activeTill,
-  });
+  }):surveyID=(surveyID==null)?myuuid.v4():surveyID;
 
   factory Survey.fromJson(Map<String, dynamic> json) {
     return Survey(

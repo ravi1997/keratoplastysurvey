@@ -1,10 +1,10 @@
-import 'package:keratoplastysurvey/api.dart' as my_api;
 import 'package:flutter/material.dart';
+import 'package:keratoplastysurvey/controller/hive_interface.dart';
 import 'package:keratoplastysurvey/widget/login_form.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.hiveInterface});
-  final my_api.HiveInterface hiveInterface;
+  final HiveInterface hiveInterface;
 
   @override
   State<LoginPage> createState() => _LoginPageState();

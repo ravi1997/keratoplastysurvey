@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:keratoplastysurvey/api.dart' as my_api;
 import 'package:keratoplastysurvey/configuration.dart';
+import 'package:keratoplastysurvey/controller/hive_interface.dart'
+    as my_hive_interface;
 import 'package:keratoplastysurvey/pages/home_page.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key, required this.hiveInterface});
-  final my_api.HiveInterface hiveInterface;
+  final my_hive_interface.HiveInterface hiveInterface;
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -27,7 +29,7 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   Future<void> _loadRememberMe() async {
-    await my_api.API.loadUser(widget.hiveInterface);
+    await my_api.API.fromHive.loadUser(widget.hiveInterface);
     setState(() {
       rememberme = user.rememberMe;
     });
@@ -53,7 +55,7 @@ class _LoginFormState extends State<LoginForm> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter the LOGIN ID';
                   }
-                  if (!RegExp(r'^[6-9]\d{9}$').hasMatch(value)) {
+                  if (!RegExp(r'^\d{10}$').hasMatch(value)) {
                     return 'Login Id must be exactly 9 numbers';
                   }
                   return null;
@@ -112,12 +114,12 @@ class _LoginFormState extends State<LoginForm> {
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
 
-                    user.token = await my_api.API.login();
+                    user.token = await my_api.API.auth.login();
                     user.rememberMe = rememberme;
                     user.signedIn = signedin;
-                    await my_api.API.storeUser(widget.hiveInterface);
+                    await my_api.API.toHive.storeUser(widget.hiveInterface);
 
-                    my_api.API.sync(hiveInterface: widget.hiveInterface);
+                    //my_api.API.sync(hiveInterface: widget.hiveInterface);
 
                     navKey.currentState?.pushReplacement(
                       MaterialPageRoute(
@@ -161,24 +163,17 @@ class _LoginFormState extends State<LoginForm> {
                                   signedin = value!;
                                 });
                               }),
-                          const Text("Keep me signed in")
+
+                          const Text("Keep me signed in",style: TextStyle(fontSize: 10),)
                         ],
                       ),
+
                     ]),
                   ),
                   const Expanded(
-                      child: Row(
+                      child: Column(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                        /* InkWell(
-                          onTap: () {},
-                          child: const Text(
-                            'Register new User',
-                            style: TextStyle(
-                                decoration: TextDecoration.underline,
-                                color: Colors.blue),
-                          ),
-                        ), */
                       ]))
                 ],
               ),

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:keratoplastysurvey/configuration.dart';
+import 'package:keratoplastysurvey/controller/hive_interface.dart';
 import 'package:keratoplastysurvey/widget/logout_button.dart';
 import 'package:keratoplastysurvey/widget/survey_list.dart';
-import 'package:keratoplastysurvey/api.dart' as my_api;
 
 class SurveyPage extends StatefulWidget {
   const SurveyPage(
       {super.key, required this.hiveInterface, required this.mode});
-  final my_api.HiveInterface hiveInterface;
+  final HiveInterface hiveInterface;
   final SurveyPageMode mode;
 
   @override

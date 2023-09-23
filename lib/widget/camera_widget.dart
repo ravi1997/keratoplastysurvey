@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'package:keratoplastysurvey/api.dart' as my_api;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:camera_universal/camera_universal.dart';
 import 'package:keratoplastysurvey/configuration.dart';
+import 'package:keratoplastysurvey/controller/util.dart';
 import 'package:keratoplastysurvey/model.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -40,7 +40,7 @@ class CameraWidget extends StatefulWidget {
 
   final Question question;
   final String backUri;
-  final int surveyId;
+  final String surveyId;
 
   @override
   State<CameraWidget> createState() => _CameraWidgetState();
@@ -48,7 +48,7 @@ class CameraWidget extends StatefulWidget {
 
 class _CameraWidgetState extends State<CameraWidget> {
   CameraController cameraController = CameraController();
-  String error_msg = "";
+  String errorMsg = "";
   @override
   void initState() {
     super.initState();
@@ -68,11 +68,9 @@ class _CameraWidgetState extends State<CameraWidget> {
           return mounted;
         },
       );
-    } catch (e, stack) {
-      print(e);
-      print(stack);
+    } catch (e) {
       setState(() {
-        error_msg = "error";
+        errorMsg = e.toString();
       });
     }
   }
@@ -97,8 +95,8 @@ class _CameraWidgetState extends State<CameraWidget> {
               child: ClipOval(
                   clipper: CircleRevealClipper(),
                   child: Visibility(
-                    visible: error_msg.isEmpty,
-                    replacement: Text(error_msg),
+                    visible: errorMsg.isEmpty,
+                    replacement: Text(errorMsg),
                     child: Camera(
                       cameraController: cameraController,
                       onCameraNotInit: (context) {
@@ -153,8 +151,6 @@ class _CameraWidgetState extends State<CameraWidget> {
                             onCameraNotActive: () {},
                           );
 
-                          print(res?.path);
-
                           showDialog(
                             context: context,
                             builder: (context) {
@@ -189,8 +185,8 @@ class _CameraWidgetState extends State<CameraWidget> {
                                     ClipOval(
                                       clipper: CircleRevealClipper(),
                                       child: Visibility(
-                                        visible: error_msg.isEmpty,
-                                        replacement: Text(error_msg),
+                                        visible: errorMsg.isEmpty,
+                                        replacement: Text(errorMsg),
                                         child: Image.file(
                                           File(res!.path),
                                           fit: BoxFit.cover,
@@ -199,36 +195,34 @@ class _CameraWidgetState extends State<CameraWidget> {
                                     ),
                                     ElevatedButton(
                                       onPressed: () async {
-                                        String projectName =
-                                            await my_api.getProjectName();
                                         var path = "/assets/db";
                                         Directory? directory;
                                         try {
-                                          if (Platform.isAndroid) {
-                                            directory =
-                                                await getExternalStorageDirectory();
-                                          } else {
-                                            directory =
-                                                await getApplicationDocumentsDirectory();
-                                          }
+                                          directory = await getApplicationDocumentsDirectory();
                                         } catch (err) {
                                           if (kDebugMode) {
-                                            print(
-                                                "Cannot get download folder path");
+                                            print("Cannot get download folder path");
                                           }
                                         }
-                                        if (!Directory(
-                                                "${directory!.path}/$projectName")
-                                            .existsSync()) {
-                                          Directory(
-                                                  "${directory.path}/$projectName")
-                                              .createSync(recursive: true);
+
+                                        String projectName = await Util.getProjectName();
+
+                                        if (!Directory("${directory!.path}/$projectName").existsSync()) {
+                                          Directory("${directory.path}/$projectName").create(recursive: true);
+                                        }else{
+                                          Directory("${directory.path}/$projectName").delete(recursive: true);
+                                          Directory("${directory.path}/$projectName").create(recursive: true);
                                         }
-                                        final varid = uuid.v4();
+                                        final varid = myuuid.v4();
                                         directory = Directory(
                                             "${directory.path}/$projectName/${widget.surveyId}/$varid");
+
+                                        if (!directory.existsSync()){
+                                          directory.create(recursive: true);
+                                        }
                                         path = directory.path;
-                                        File(res!.path).copy(path);
+					print(res.path);
+                                        File(res.path).copy(path);
                                         var mylist = (ans['data'] as List);
                                         int index = mylist.indexWhere(
                                             (element) =>
@@ -276,17 +270,15 @@ class _CameraWidgetState extends State<CameraWidget> {
                     ),
                     ElevatedButton(
                       onPressed: () async {
-                        int camera_id = 1;
+                        int cameraId = 1;
                         var res = cameraController.camera_mobile_datas;
-                        print(cameraController.camera_id);
-                        print(res.length);
                         if (cameraController.camera_id > 1) {
-                          camera_id = 1;
+                          cameraId = 1;
                         } else {
-                          camera_id = res.length;
+                          cameraId = res.length;
                         }
                         await cameraController.action_change_camera(
-                          cameraId: camera_id,
+                          cameraId: cameraId,
                           setState: setState,
                           mounted: () {
                             return mounted;

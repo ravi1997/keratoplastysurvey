@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keratoplastysurvey/configuration.dart';
+import 'package:keratoplastysurvey/controller/hive_interface.dart';
 import 'package:keratoplastysurvey/model.dart';
 import 'package:keratoplastysurvey/pages/survey_form_page.dart';
 import 'package:keratoplastysurvey/api.dart' as my_api;
@@ -11,7 +12,7 @@ class SurveyFormStartPage extends StatefulWidget {
       required this.hiveInterface,
       required this.survey,
       required this.mode});
-  final my_api.HiveInterface hiveInterface;
+  final HiveInterface hiveInterface;
   final SurveyPageMode mode;
 
   final Survey survey;
@@ -112,24 +113,21 @@ class _SurveyFormStartPageState extends State<SurveyFormStartPage> {
 
 class MyData extends DataTableSource {
   // Generate some made-up data
-  final my_api.HiveInterface hiveInterface;
+  final HiveInterface hiveInterface;
   final Survey survey;
   late List<Map<dynamic, dynamic>> _data;
   final SurveyPageMode mode;
 
   MyData(
       {required this.hiveInterface, required this.survey, required this.mode}) {
-    _data = my_api.API.getData(
-        hiveInterface: hiveInterface, surveyId: survey.surveyID, mode: mode);
+    _data = my_api.API.fromHive
+        .loadAnswers(hiveInterface, survey.surveyID ?? "", mode);
   }
 
   Future<void> upload() async {
-    bool result = await my_api.API.uploadAnswers(datas: _data);
-    if (result) {
-      my_api.API.upload(hiveInterface: hiveInterface, datas: _data);
-      _data.clear();
-      notifyListeners();
-    }
+    my_api.API.toHive.uploadAnswer(hiveInterface, _data);
+    _data.clear();
+    notifyListeners();
   }
 
   @override
@@ -178,8 +176,8 @@ class MyData extends DataTableSource {
             IconButton(
               icon: const Icon(Icons.delete),
               onPressed: () {
-                my_api.API.deleteData(
-                    hiveInterface: hiveInterface, peopleID: _data[index]['ID']);
+                my_api.API.toHive
+                    .deleteAnswer(hiveInterface, _data[index]['ID']);
                 _data.remove(_data[index]);
                 notifyListeners();
               },

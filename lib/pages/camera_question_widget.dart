@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:keratoplastysurvey/configuration.dart';
-import 'package:keratoplastysurvey/api.dart' as my_api;
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:keratoplastysurvey/controller/util.dart';
 import 'package:keratoplastysurvey/model.dart';
 import 'package:keratoplastysurvey/widget/camera_widget.dart';
 import 'package:path_provider/path_provider.dart';
@@ -18,7 +18,7 @@ class CameraQuestionWidget extends StatefulWidget {
 
   final String getBack;
   final Question question;
-  final int surveyId;
+  final String surveyId;
 
   @override
   State<CameraQuestionWidget> createState() => _CameraQuestionWidgetState();
@@ -39,7 +39,7 @@ class _CameraQuestionWidgetState extends State<CameraQuestionWidget> {
                 final pickedImage = await picker.pickImage(
                     source: ImageSource
                         .gallery); // You can use ImageSource.camera for the camera.
-                String projectName = await my_api.getProjectName();
+                String projectName = await Util.getProjectName();
                 var path = "/assets/db";
                 Directory? directory;
                 try {
@@ -58,7 +58,7 @@ class _CameraQuestionWidgetState extends State<CameraQuestionWidget> {
                   Directory("${directory.path}/$projectName")
                       .createSync(recursive: true);
                 }
-                final varid = uuid.v4();
+                final varid = myuuid.v4();
                 directory = Directory(
                     "${directory.path}/$projectName/${widget.surveyId}/$varid");
                 path = directory.path;

@@ -4,18 +4,18 @@ import 'package:keratoplastysurvey/model.dart';
 import 'package:keratoplastysurvey/pages/camera_question_widget.dart';
 import 'package:keratoplastysurvey/util.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
 
 bool isEmpty(value) {
   return value == null || value == "";
 }
 
 Widget createQuestion(Question ques,
-    {Function? callback, required SurveyPageMode mode}) {
+    {Function? callback, required SurveyPageMode mode,required Survey survey,required int currentSectionId}) {
   String required = (ques.required ?? false) ? '*' : '';
   String label = '${ques.question} $required';
   String hint = (ques.hint ?? "");
   String initvalue = "";
+  print(ques.questionID);
   if ((ques.lastSaved ?? false || mode != SurveyPageMode.entry) &&
       ans['data'] != null) {
     var mylist = (ans['data'] as List);
@@ -145,6 +145,7 @@ Widget createQuestion(Question ques,
           ),
         ));
   } else if (ques.type == QuestionType.dropdown) {
+    print(ques.question);
     return Visibility(
         visible: (ques.visibilityCondition != null)
             ? ques.visibilityCondition!.solve(ans)
@@ -152,6 +153,7 @@ Widget createQuestion(Question ques,
         child: Padding(
             padding: const EdgeInsets.all(10.0),
             child: DropdownButtonFormField<int>(
+		 isExpanded: true,
               decoration: InputDecoration(
                 labelText: label,
                 border: const OutlineInputBorder(),
@@ -165,6 +167,7 @@ Widget createQuestion(Question ques,
                 return DropdownMenuItem<int>(
                   value: ques.valueRange.indexOf(option) + 1,
                   child: Text(option),
+		overflow: TextOverflow.ellipsis
                 );
               }).toList(),
               onChanged:
@@ -340,13 +343,8 @@ Widget createQuestion(Question ques,
       ),
     );
   } else if (ques.type == QuestionType.imagePicker) {
-    String uri = "";
-    final currentRoute = ModalRoute.of(navKey.currentContext!);
-    if (currentRoute != null) {
-      uri = currentRoute.settings.name ?? '';
-    }
 
-    final surveyId = int.parse(uri.split('/')[0]);
+    final surveyId = survey.surveyID ??"";
 
     return Visibility(
         visible: (ques.visibilityCondition != null)
@@ -363,11 +361,11 @@ Widget createQuestion(Question ques,
                           settings: const RouteSettings(name: "/camera/camera"),
                           builder: (context) => CameraQuestionWidget(
                               question: ques,
-                              surveyId: surveyId,
-                              getBack: uri)),
+                              surveyId: surveyId ,
+                              getBack: "/$surveyId/$currentSectionId")),
                     );
                   },
-                  child: Text("Upload"))
+                  child: const Text("Upload"))
             ],
           ),
         ));

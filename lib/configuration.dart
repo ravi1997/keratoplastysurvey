@@ -9,26 +9,28 @@ User user = User(
     name: "", loginId: "", password: "", rememberMe: false, signedIn: false);
 
 List<Survey> surveys = [];
-var uuid = const Uuid();
+var myuuid = const Uuid();
 List<String> variables = [];
 
 final navKey = GlobalKey<NavigatorState>();
 
 class Configuration {
-  final String baseURL;
-  String get district => '$baseURL/district';
-  String get cluster => '$baseURL/cluster';
-  String get login => '$baseURL/auth/login';
-  String get logout => '$baseURL/auth/logout';
-  String get readSurvey => '$baseURL/survey/read';
-  String get createAnswer => '$baseURL/answer/insert_data';
-  String get uploadAnswers => '$baseURL/answer/create_all';
-
-  String get sync => '$baseURL/sync';
-
   final String apiKey = 'my secret key';
+  final Route route;
 
-  Configuration({required this.baseURL});
+  Configuration(String baseURL) : route = Route(baseURL: baseURL);
 }
 
-Configuration? configuration;
+Configuration configuration = Configuration("");
+
+class Route {
+  final String baseURL;
+  String get login => '$baseURL/auth/login';
+  String get logout => '$baseURL/auth/logout';
+
+  String get createAnswer => '$baseURL/answer/insert_data/keratoplasty';
+  String get updateAnswers => '$baseURL/answer/update_data/keratoplasty';
+  String get getAnswers => '$baseURL/answer/get/keratoplasty';
+
+  Route({required this.baseURL});
+}

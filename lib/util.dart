@@ -73,10 +73,6 @@ class ConditionAtomic {
   bool solve(Map<String, dynamic> parameters) {
     final pattern = RegExp(r'[a-zA-Z]+');
 
-    print(left);
-    print(right);
-
-    print(getValue(parameters, left));
     var value = getValue(parameters, left);
     if (value == "") return false;
 
@@ -122,11 +118,12 @@ class Condition {
 
   String? regex = "";
 
-  Condition({required this.condition,this.sequences, this.cas, this.cs, this.regex});
+  Condition(
+      {required this.condition, this.sequences, this.cas, this.cs, this.regex});
 
   factory Condition.fromJson(Map<String, dynamic> json) {
     return Condition(
-	      condition: json['condition'],
+        condition: json['condition'],
         sequences: (json['sequences'] == null)
             ? null
             : (json['sequences'] as List)
@@ -147,9 +144,7 @@ class Condition {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-	'condition':condition
-    };
+    return {'condition': condition};
   }
 
   void setRegex(String reg) {
@@ -180,41 +175,49 @@ class Condition {
     int currentC = 0;
     int current = 0;
     List<bool> stack = [];
+    print("my condition");
+    print(condition);
+    print(sequences);
 
-    while (current < sequences!.length) {
-      var s = sequences?[current];
+    if(sequences!=null){
+      while (current < sequences!.length) {
+        var s = sequences?[current];
 
-      if (s == Sequence.ca) {
-        stack.add(cas![currentCA++].solve(parameters));
-      } else if (s == Sequence.c) {
-        stack.add(cs![currentC++].solve(parameters));
-      } else if (s == Sequence.and && sequences?[current + 1] == Sequence.ca) {
-        bool left = stack.last;
-        bool right = cas![currentCA++].solve(parameters);
+        if (s == Sequence.ca) {
+          stack.add(cas![currentCA++].solve(parameters));
+        } else if (s == Sequence.c) {
+          stack.add(cs![currentC++].solve(parameters));
+        } else if (s == Sequence.and && sequences?[current + 1] == Sequence.ca) {
+          bool left = stack.last;
+          bool right = cas![currentCA++].solve(parameters);
 
-        stack.removeLast();
-        stack.add(left && right);
-        current++;
-      } else if (s == Sequence.and && sequences![current + 1] == Sequence.c) {
-        bool left = stack.last;
-        bool right = cs![currentC++].solve(parameters);
-        stack.removeLast();
-        stack.add(left && right);
-        current++;
-      } else if (s == Sequence.or && sequences![current + 1] == Sequence.ca) {
-        bool left = stack.last;
-        bool right = cas![currentCA++].solve(parameters);
-        stack.removeLast();
-        stack.add(left || right);
-        current++;
-      } else if (s == Sequence.or && sequences?[current + 1] == Sequence.c) {
-        bool left = stack.last;
-        bool right = cs![currentC++].solve(parameters);
-        stack.removeLast();
-        stack.add(left || right);
+          stack.removeLast();
+          stack.add(left && right);
+          current++;
+        } else if (s == Sequence.and && sequences![current + 1] == Sequence.c) {
+          bool left = stack.last;
+          bool right = cs![currentC++].solve(parameters);
+          stack.removeLast();
+          stack.add(left && right);
+          current++;
+        } else if (s == Sequence.or && sequences![current + 1] == Sequence.ca) {
+          bool left = stack.last;
+          bool right = cas![currentCA++].solve(parameters);
+          stack.removeLast();
+          stack.add(left || right);
+          current++;
+        } else if (s == Sequence.or && sequences?[current + 1] == Sequence.c) {
+          bool left = stack.last;
+          bool right = cs![currentC++].solve(parameters);
+          stack.removeLast();
+          stack.add(left || right);
+          current++;
+        }
         current++;
       }
-      current++;
+    }
+    else{
+      return false;
     }
     return stack.first;
   }
@@ -231,16 +234,16 @@ class Parser {
   Parser(this.tokens);
 
   Condition parse() {
-	String input = "";
-      for (var token in tokens) {
-        input+= token;
-      }
-    List<Condition> condition = [Condition(condition:input)];
+    String input = "";
+    for (var token in tokens) {
+      input += token;
+    }
+    List<Condition> condition = [Condition(condition: input)];
 
     List<String> params = [];
 
     if (tokens[0] == "REGEX") {
-      Condition my = Condition(condition:input);
+      Condition my = Condition(condition: input);
       String regex = "";
 
       for (var token in tokens.skip(1)) {
@@ -358,7 +361,7 @@ class Parser {
       } else if (tokens[index] == "and") {
         condition.last.addSequence(Sequence.and);
       } else if (tokens[index] == "(") {
-        condition.add(Condition(condition:input));
+        condition.add(Condition(condition: input));
       } else if (tokens[index] == ")") {
         Condition temp = condition.last;
         condition.removeLast();
@@ -376,7 +379,7 @@ class Parser {
 }
 
 Condition getCondition(String input) {
-  Condition condition = Condition(condition:input);
+  Condition condition = Condition(condition: input);
 
   List<String> tokens = tokenizeString(input);
 

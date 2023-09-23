@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:keratoplastysurvey/configuration.dart';
+import 'package:keratoplastysurvey/controller/hive_interface.dart'
+    as my_hive_interface;
 import 'package:keratoplastysurvey/model.dart';
 import 'package:keratoplastysurvey/pages/survey_form_page.dart';
 import 'package:keratoplastysurvey/widget/create_question.dart';
@@ -14,7 +16,7 @@ class CreateSection extends StatefulWidget {
       required this.mode});
   final int sectionIndex;
   final Survey survey;
-  final my_api.HiveInterface hiveInterface;
+  final my_hive_interface.HiveInterface hiveInterface;
   final SurveyPageMode mode;
 
   @override
@@ -38,7 +40,7 @@ class _CreateSectionState extends State<CreateSection> {
 
       for (var question in section.questions) {
         questions.add(
-            createQuestion(question, callback: setState, mode: widget.mode));
+            createQuestion(question, callback: setState, mode: widget.mode,survey: widget.survey,currentSectionId:widget.sectionIndex ));
       }
       if (section.finalSection != null) {
         final fSection = section.finalSection ?? false;
@@ -53,9 +55,9 @@ class _CreateSectionState extends State<CreateSection> {
                 ans["STATUS"] = "CREATED";
                 ans["CREATE-DATE-TIME"] = DateTime.now().toIso8601String();
 
-                await my_api.API.storeAnswer(widget.hiveInterface);
-                final script_message = await my_api.API.createAnswer();
-                print(script_message);
+                await my_api.API.toHive.storeAnswer(widget.hiveInterface);
+                final scriptMessage = await my_api.API.answerapi.insertAnswer();
+                print(scriptMessage);
                 navKey.currentState?.popUntil(
                     ModalRoute.withName('/${widget.survey.surveyID}'));
               }
