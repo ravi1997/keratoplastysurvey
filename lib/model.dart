@@ -12,6 +12,44 @@ List<String> toListString(List<dynamic> datas) {
   return dataString;
 }
 
+
+class KeratoplastyAIResult {
+  String answerID = '';
+  String resultRE = '';
+  String resultLE = '';
+  String resultREConfidence = "";
+  String resultLEConfidence = "";
+
+  KeratoplastyAIResult(
+      {required this.answerID,
+        required this.resultLE,
+        required this.resultRE,
+        required this.resultLEConfidence,
+        required this.resultREConfidence,
+      });
+
+  factory KeratoplastyAIResult.fromJson(Map<String, dynamic> json) {
+    return KeratoplastyAIResult(
+        answerID: json['answerID'] ?? "",
+        resultLE: json['resultLE'] ?? "",
+        resultRE: json['resultRE'] ?? "",
+        resultLEConfidence: json['resultLEConfidence'] ?? "",
+        resultREConfidence: json['resultREConfidence'] ?? "",
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'answerID': answerID,
+      'resultLE': resultLE,
+      'resultRE': resultRE,
+      'resultLEConfidence': resultLEConfidence,
+      'resultREConfidence': resultREConfidence,
+    };
+  }
+}
+
+
 class User {
   String name = '';
   String loginId = '';
@@ -129,7 +167,7 @@ class Question {
       required this.valueRange}):questionID=(questionID==null)?myuuid.v4():questionID;
 
   factory Question.fromJson(Map<String, dynamic> json) {
-    print(json['constraint']);
+
     return Question(
       questionID: json['questionID'],
       question: json['question'],
@@ -138,21 +176,16 @@ class Question {
       required: json['required'],
       visibilityCondition: (json['visibilityCondition'] == null)
           ? null
-          : (json['visibilityCondition']['condition'] == null)
-              ? null
-              : getCondition(json['visibilityCondition']['condition']),
+          :  getCondition(json['visibilityCondition']),
       constraint: (json['constraint'] == null)
           ? null
-          : (json['constraint']['condition'] == null)
-              ? null
-              : getCondition(json['constraint']['condition']),
+          : getCondition(json['constraint']),
       constraintMessage: json['constraintMessage'],
       defaultValue: json['defaultValue'],
       lastSaved: json['lastSaved'],
       type: QuestionType.fromJson(json['type']),
       valueType: json['valueType'],
-      valueRangeName:
-          (json['valueRange'].length > 0) ? json['valueRange']['name'] : "",
+      valueRangeName:json['valueRangeName'],
       valueRange: getValueRangeList(json['valueRange']),
     );
   }
@@ -174,6 +207,7 @@ class Question {
       'lastSaved': lastSaved,
       'type': type.toJson(),
       'valueType': valueType,
+      'valueRangeName':valueRangeName,
       'valueRange': getValueRange(valueRangeName, valueRange),
     };
   }
@@ -188,7 +222,7 @@ class Jump {
   factory Jump.fromJson(Map<String, dynamic> json) {
     return Jump(
       sectionID: json['sectionID'],
-      condition: getCondition(json['condition']),
+      condition: (json['condition']==null)?null:getCondition(json['condition']),
     );
   }
 

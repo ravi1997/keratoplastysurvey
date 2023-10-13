@@ -15,6 +15,7 @@ class Auth {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       user = User.fromJson(data['user']);
+      user.token = data['access_token'];
       return data['access_token'];
     } else {
       final errorMessage = 'Login Failed: ${response.statusCode}';

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:keratoplastysurvey/configuration.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -39,43 +40,80 @@ class _CameraQuestionWidgetState extends State<CameraQuestionWidget> {
                 final pickedImage = await picker.pickImage(
                     source: ImageSource
                         .gallery); // You can use ImageSource.camera for the camera.
-                String projectName = await Util.getProjectName();
                 var path = "/assets/db";
                 Directory? directory;
                 try {
-                  if (Platform.isAndroid) {
-                    directory = await getExternalStorageDirectory();
+                  if(Platform.isAndroid) {
+                    directory = (await getExternalStorageDirectory());
                   } else {
-                    directory = await getApplicationDocumentsDirectory();
+                    directory = (await getApplicationDocumentsDirectory());
                   }
                 } catch (err) {
                   if (kDebugMode) {
                     print("Cannot get download folder path");
                   }
                 }
-                if (!Directory("${directory!.path}/$projectName")
-                    .existsSync()) {
-                  Directory("${directory.path}/$projectName")
-                      .createSync(recursive: true);
+
+                String projectName = await Util.getProjectName();
+                if (!Directory("${directory!.path}/$projectName").existsSync()) {
+                  Directory("${directory.path}/$projectName").create(recursive: true);
                 }
+
+                directory = Directory("${directory.path}/$projectName");
+
                 final varid = myuuid.v4();
-                directory = Directory(
-                    "${directory.path}/$projectName/${widget.surveyId}/$varid");
-                path = directory.path;
-                File(pickedImage!.path).copy(path);
+                path = "${directory.path}/$varid.jpeg";
+
+                try{
+                  print("res : ${pickedImage!.path}");
+                  print("path : $path");
+
+                  /*final imageFile = File(res.path);
+
+
+                                          final srcimage = img.decodeImage(imageFile.readAsBytesSync());
+                                          img.Image resizedImage = img.copyResize(srcimage!, width: 1600, height: 900);
+                                          */
+
+
+
+                  File(pickedImage!.path).copy( path);
+
+                  if(await File(path).existsSync()){
+                    print("File found");
+                  }
+
+                }catch(e){
+                  Fluttertoast.showToast(
+                      msg: e.toString(),
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.CENTER,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                      fontSize: 16.0
+                  );
+                }
+
+
+
                 var mylist = (ans['data'] as List);
-                int index = mylist.indexWhere((element) =>
-                    element['question_id'] == widget.question.questionID);
+                int index = mylist.indexWhere(
+                        (element) =>
+                    element['question_id'] ==
+                        widget.question.questionID);
                 if (index == -1) {
                   mylist.add({
-                    "value": varid,
-                    "question_id": widget.question.questionID,
+                    "value": path.split("/").last,
+                    "question_id":
+                    widget.question.questionID,
                     "variable": widget.question.variable
                   });
                 } else {
                   mylist[index] = {
-                    "value": varid,
-                    "question_id": widget.question.questionID,
+                    "value": path.split("/").last,
+                    "question_id":
+                    widget.question.questionID,
                     "variable": widget.question.variable
                   };
                 }

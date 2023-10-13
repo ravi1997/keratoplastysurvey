@@ -1,35 +1,50 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:camera_universal/camera_universal.dart';
 import 'package:keratoplastysurvey/configuration.dart';
 import 'package:keratoplastysurvey/controller/util.dart';
 import 'package:keratoplastysurvey/model.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:image/image.dart' as img;
 
 class CircleRevealClipper extends CustomClipper<Rect> {
   CircleRevealClipper();
 
   @override
   Rect getClip(Size size) {
-    final epicenter = Offset(size.width * 0.9, size.height * 0.9);
+    final centerx = size.width * 0.5;
+    final centery = size.height * 0.5;
 
-    // Calculate distance from epicenter to the top left corner to make sure clip the image into circle.
+    final recwidthrel = size.width * 0.90;
+    final recheightrel = size.height * 0.90;
 
-    final distanceToCorner = epicenter.dy;
+    final width = min(recheightrel,recwidthrel);
 
-    final radius = distanceToCorner / 2;
-    final diameter = radius * 0.90;
 
-    return Rect.fromLTWH(epicenter.dx - radius + size.width * 0.1,
-        epicenter.dy - radius - size.height * 0.2, diameter, diameter);
+
+    final left = centerx - width/2;
+    final top = centery - width/2;
+
+
+    return Rect.fromLTWH(
+      left,
+      top,
+      width,
+      width,
+    );
   }
 
   @override
   bool shouldReclip(CustomClipper<Rect> oldClipper) {
     return true;
   }
+
 }
+
+
 
 class CameraWidget extends StatefulWidget {
   const CameraWidget(
@@ -48,7 +63,19 @@ class CameraWidget extends StatefulWidget {
 
 class _CameraWidgetState extends State<CameraWidget> {
   CameraController cameraController = CameraController();
+  final GlobalKey globalKey = GlobalKey();
   String errorMsg = "";
+  bool submit = false;
+
+  void setSubmit(bool val){
+      // Your code that calls setState or modifies the widget tree
+      setState(() {
+        submit = val;
+        // Update the state here
+      });
+
+  }
+
   @override
   void initState() {
     super.initState();
@@ -58,8 +85,10 @@ class _CameraWidgetState extends State<CameraWidget> {
   Future<void> task() async {
     try {
       await cameraController.initializeCameras();
+
       await cameraController.initializeCamera(
         setState: setState,
+
       );
 
       await cameraController.activateCamera(
@@ -81,8 +110,13 @@ class _CameraWidgetState extends State<CameraWidget> {
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
+    if(submit){
+      navKey.currentState?.popUntil(
+          ModalRoute.withName(widget.backUri));
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.question.question),
@@ -121,7 +155,7 @@ class _CameraWidgetState extends State<CameraWidget> {
               child: Container(
                 height: MediaQuery.of(context).size.height * 1 / 5,
                 decoration: const BoxDecoration(
-                  color: Color.fromARGB(102, 0, 0, 0),
+                  color: Color.fromARGB(0, 0, 0, 0),
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Row(
@@ -131,13 +165,13 @@ class _CameraWidgetState extends State<CameraWidget> {
                       onPressed: () async {},
                       style: ElevatedButton.styleFrom(
                         shape: const CircleBorder(),
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(10),
                       ),
                       child: const RotatedBox(
                         quarterTurns: 3,
                         child: Icon(
                           Icons.more_horiz_rounded,
-                          size: 50,
+                          size: 30,
                           color: Colors.white,
                         ),
                       ),
@@ -151,20 +185,35 @@ class _CameraWidgetState extends State<CameraWidget> {
                             onCameraNotActive: () {},
                           );
 
-                          showDialog(
+                          final imageFile = File(res!.path);
+
+                          final srcimage = img.decodeImage(imageFile.readAsBytesSync());
+                          img.Image resizedImage = img.copyResize(srcimage!, width: 900 , height: 1600);
+                          const centerx = 450;
+                          const centery = 800;
+
+                          const recwidthrel = 900 * 0.90;
+                          const recheightrel = 1600 * 0.90;
+
+                          final width = min(recheightrel,recwidthrel);
+
+                          img.Image croppedImage =img.copyCropCircle(resizedImage,centerX: centerx,centerY: centery,radius: (width/2).round());
+                          await img.encodeJpgFile(res.path,croppedImage);
+
+                          bool shouldPop = await showDialog(
                             context: context,
-                            builder: (context) {
+                            builder: (BuildContext context) {
                               return Dialog(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
+                                  CrossAxisAlignment.stretch,
                                   children: [
                                     Padding(
                                       padding: const EdgeInsets.only(left: 8.0),
                                       child: Row(
                                         mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
+                                        MainAxisAlignment.spaceBetween,
                                         children: [
                                           const Text(
                                             'PICTURE',
@@ -173,24 +222,21 @@ class _CameraWidgetState extends State<CameraWidget> {
                                           ),
                                           IconButton(
                                             onPressed: () {
-                                              Navigator.of(context).pop();
+                                              Navigator.of(context).pop(false);
                                             },
                                             icon:
-                                                const Icon(Icons.close_rounded),
+                                            const Icon(Icons.close_rounded),
                                             color: Colors.redAccent,
                                           ),
                                         ],
                                       ),
                                     ),
-                                    ClipOval(
-                                      clipper: CircleRevealClipper(),
-                                      child: Visibility(
-                                        visible: errorMsg.isEmpty,
-                                        replacement: Text(errorMsg),
-                                        child: Image.file(
-                                          File(res!.path),
-                                          fit: BoxFit.cover,
-                                        ),
+                                    Visibility(
+                                      visible: errorMsg.isEmpty,
+                                      replacement: Text(errorMsg),
+                                      child: Image.file(
+                                        File(res.path),
+                                        fit: BoxFit.cover,
                                       ),
                                     ),
                                     ElevatedButton(
@@ -198,7 +244,11 @@ class _CameraWidgetState extends State<CameraWidget> {
                                         var path = "/assets/db";
                                         Directory? directory;
                                         try {
-                                          directory = await getApplicationDocumentsDirectory();
+                                          if(Platform.isAndroid) {
+                                            directory = (await getExternalStorageDirectory());
+                                          } else {
+                                            directory = (await getApplicationDocumentsDirectory());
+                                          }
                                         } catch (err) {
                                           if (kDebugMode) {
                                             print("Cannot get download folder path");
@@ -206,48 +256,58 @@ class _CameraWidgetState extends State<CameraWidget> {
                                         }
 
                                         String projectName = await Util.getProjectName();
-
                                         if (!Directory("${directory!.path}/$projectName").existsSync()) {
                                           Directory("${directory.path}/$projectName").create(recursive: true);
-                                        }else{
-                                          Directory("${directory.path}/$projectName").delete(recursive: true);
-                                          Directory("${directory.path}/$projectName").create(recursive: true);
                                         }
-                                        final varid = myuuid.v4();
-                                        directory = Directory(
-                                            "${directory.path}/$projectName/${widget.surveyId}/$varid");
 
-                                        if (!directory.existsSync()){
-                                          directory.create(recursive: true);
+                                        directory = Directory("${directory.path}/$projectName");
+                                        final varid = myuuid.v4();
+                                        path = "${directory.path}/$varid.jpeg";
+
+
+                                        try{
+                                          if (kDebugMode) {
+                                            print("res : ${res.path}");
+                                            print("path : $path");
+                                          }
+
+                                          File(res.path).copy( path);
+
+                                        }catch(e){
+                                          Fluttertoast.showToast(
+                                              msg: e.toString(),
+                                              toastLength: Toast.LENGTH_SHORT,
+                                              gravity: ToastGravity.CENTER,
+                                              timeInSecForIosWeb: 1,
+                                              backgroundColor: Colors.red,
+                                              textColor: Colors.white,
+                                              fontSize: 16.0
+                                          );
                                         }
-                                        path = directory.path;
-					print(res.path);
-                                        File(res.path).copy(path);
                                         var mylist = (ans['data'] as List);
                                         int index = mylist.indexWhere(
-                                            (element) =>
-                                                element['question_id'] ==
+                                                (element) =>
+                                            element['question_id'] ==
                                                 widget.question.questionID);
                                         if (index == -1) {
                                           mylist.add({
-                                            "value": varid,
+                                            "value": path.split("/").last,
                                             "question_id":
-                                                widget.question.questionID,
+                                            widget.question.questionID,
                                             "variable": widget.question.variable
                                           });
                                         } else {
                                           mylist[index] = {
-                                            "value": varid,
+                                            "value": path.split("/").last,
                                             "question_id":
-                                                widget.question.questionID,
+                                            widget.question.questionID,
                                             "variable": widget.question.variable
                                           };
                                         }
                                         ans['data'] = mylist;
 
-                                        navKey.currentState?.popUntil(
-                                            ModalRoute.withName(
-                                                widget.backUri));
+                                        Navigator.of(context).pop(true);
+
                                       },
                                       child: const Text("Submit"),
                                     )
@@ -255,12 +315,19 @@ class _CameraWidgetState extends State<CameraWidget> {
                                 ),
                               );
                             },
-                          );
+                          )
+                          ?? false
+                          ;
+                          if (shouldPop != null && shouldPop) {
+
+                            navKey.currentState?.popUntil(
+                                ModalRoute.withName(widget.backUri));
+                          }
                         });
                       },
                       style: ElevatedButton.styleFrom(
                         shape: const CircleBorder(),
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(14),
                       ),
                       child: const Icon(
                         Icons.camera_alt,
@@ -290,11 +357,11 @@ class _CameraWidgetState extends State<CameraWidget> {
                       },
                       style: ElevatedButton.styleFrom(
                         shape: const CircleBorder(),
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(10),
                       ),
                       child: const Icon(
                         Icons.sync,
-                        size: 50,
+                        size: 30,
                         color: Colors.white,
                       ),
                     ),

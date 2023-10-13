@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:keratoplastysurvey/controller/hive_interface.dart';
+import 'package:keratoplastysurvey/controller/local_store_interface.dart';
 import 'package:keratoplastysurvey/widget/login_form.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.hiveInterface});
-  final HiveInterface hiveInterface;
+  final LocalStoreInterface hiveInterface;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -19,9 +19,11 @@ class _LoginPageState extends State<LoginPage> {
         ),
         body: Container(
           padding: const EdgeInsets.all(8.0),
-          child: LoginForm(
-            hiveInterface: widget.hiveInterface,
-          ),
+          child: SingleChildScrollView(
+            child: LoginForm(
+              hiveInterface: widget.hiveInterface,
+            ),
+          ) ,
         ));
   }
 }
