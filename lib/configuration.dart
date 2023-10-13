@@ -31,6 +31,7 @@ class Route {
   String get createAnswer => '$baseURL/answer/insert_data/keratoplasty';
   String get updateAnswers => '$baseURL/answer/update_data/keratoplasty';
   String get getAnswers => '$baseURL/answer/get/keratoplasty';
+  String get uploadAnswers => '$baseURL/answer/upload/keratoplasty';
 
   Route({required this.baseURL});
 }

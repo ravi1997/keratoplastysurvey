@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:keratoplastysurvey/configuration.dart';
-import 'package:keratoplastysurvey/controller/hive_interface.dart';
+import 'package:keratoplastysurvey/controller/local_store_interface.dart';
 
 import 'package:keratoplastysurvey/pages/survey_page.dart';
 import 'package:keratoplastysurvey/widget/logout_button.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key, required this.hiveInterface});
-  final HiveInterface hiveInterface;
+  final LocalStoreInterface hiveInterface;
 
   @override
   State<AdminPage> createState() => _AdminPageState();

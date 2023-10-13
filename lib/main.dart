@@ -1,27 +1,26 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:keratoplastysurvey/api.dart' as my_api;
-import 'package:keratoplastysurvey/controller/hive_interface.dart'
+import 'package:keratoplastysurvey/controller/local_store_interface.dart'
     as my_hive_interface;
 import 'package:keratoplastysurvey/configuration.dart';
 import 'package:keratoplastysurvey/controller/util.dart';
 import 'package:keratoplastysurvey/model.dart';
 import 'package:keratoplastysurvey/pages/home_page.dart';
 import 'package:keratoplastysurvey/pages/login_page.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:keratoplastysurvey/util.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'dart:math';
 
-void testData(my_hive_interface.HiveInterface hiveInterface) {
+
+void testData(my_hive_interface.LocalStoreInterface localInterface) {
   surveys.clear();
 
-  surveys = my_api.API.fromHive.loadSurveys(hiveInterface);
-
-  print(surveys.length);
+  surveys = my_api.API.fromFile.loadSurveys(localInterface);
 
   if (surveys.isEmpty) {
     Survey keratoplasty = Survey(
@@ -138,7 +137,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 valueRange: ["Examined", "Not available", "Refused"]),
           ], jumps: [
             Jump(sectionID: 2, condition: getCondition(r"${ examination }=1")),
-            Jump(sectionID: 8),
+            Jump(sectionID:9),
           ]),
           Section(sectionID: 2, sectionName: "Section B", questions: [
             Question(
@@ -157,7 +156,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
-                valueRange: ["Central", "Peripheral"]),
+                valueRange: ["Central (covering atleast half the pupil)", "Peripheral (covering less than half the pupil)","Total"]),
             Question(
                 question: "Size",
                 variable: "sizeRE",
@@ -166,7 +165,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
-                valueRange: ["<5 mm", ">5 mm"]),
+                valueRange: ["<5 mm (less than 2 times the pupil size)", ">=5 mm (equal to or more than 2 times the pupil size)"]),
             Question(
                 question: "Left eye: - CO ",
                 variable: "coLE",
@@ -183,7 +182,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
-                valueRange: ["Central", "Peripheral"]),
+                valueRange: ["Central (covering atleast half the pupil)", "Peripheral (covering less than half the pupil)","Total"]),
             Question(
                 question: "Size",
                 variable: "sizeLE",
@@ -192,9 +191,9 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
-                valueRange: ["<5 mm", ">5 mm"]),
+                valueRange: ["<5 mm (less than 2 times the pupil size)", ">=5 mm (equal to or more than 2 times the pupil size)"]),
             Question(
-                question: "Right eye: - Keratoplasty",
+                question: "Right eye: - Has Keratoplasty been done previously?",
                 variable: "kerRE",
                 required: true,
                 lastSaved: true,
@@ -202,7 +201,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 valueType: "Number",
                 valueRange: ["Yes", "No"]),
             Question(
-                question: "Left eye: - Keratoplasty ",
+                question: "Left eye: - Has Keratoplasty been done previously? ",
                 variable: "kerLE",
                 required: true,
                 lastSaved: true,
@@ -215,17 +214,18 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
             Jump(
                 sectionID: 5,
                 condition: getCondition(
-                    r"${coRE}=1 or ${coLE}=1 or ${kerRE}=1 or ${ kerRE }=1")),
+                    r"${coRE}=1 or ${coLE}=1 or ${kerRE}=1 or ${ kerLE }=1")),
             Jump(
                 sectionID: 7,
                 condition: getCondition(r"${ coLE } = 1 or ${ coRE } = 1")),
+            Jump(sectionID:8),
           ]),
           Section(
               sectionID: 3,
               sectionName: "Section B - Right Eye",
               questions: [
                 Question(
-                    question: "Right eye: - Age of onset of CO",
+                    question: "Age of onset of CO",
                     variable: "coAgeRE",
                     required: true,
                     constraint: getCondition(r"${ coAgeRE } <= ${ age }"),
@@ -236,26 +236,16 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     valueRange: []),
                 Question(
                     question:
-                        "Right eye: - Did you have any injury / trauma to this eye ? ",
-                    variable: "traumaRE",
-                    required: true,
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Right eye: - Did the opacity occur after trauma to the right eye ",
+                        "Did the opacity occur after trauma to the right eye ",
                     variable: "traumacorrelationRE",
                     required: true,
-                    visibilityCondition: getCondition(r"${ traumaRE }=1"),
                     lastSaved: true,
                     type: QuestionType.dropdown,
                     valueType: "Number",
                     valueRange: ["Yes", "No"]),
                 Question(
                     question:
-                        "Right eye: - With what object did the injury occur ? ",
+                        "With what object did the injury occur ? ",
                     variable: "traumaobjectRE",
                     required: true,
                     visibilityCondition:
@@ -275,18 +265,8 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     ]),
                 Question(
                     question:
-                        "Right Eye: - Did you take any treatment for the injury ? ",
-                    variable: "traumatreatmentRE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ traumacorrelationRE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Right Eye: - Do you have any history of episode / s of redness / infection / keratitis / 'phoola' ? ",
-                    variable: "infectionRE",
+                        "Right Eye: - Did the opacity occur in childhood after an episode of febrile illness with rash ? ",
+                    variable: "childhoodRE",
                     required: true,
                     lastSaved: true,
                     type: QuestionType.dropdown,
@@ -294,18 +274,8 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     valueRange: ["Yes", "No"]),
                 Question(
                     question:
-                        "Right Eye: - Did you take any treatment for the infection ? ",
-                    variable: "infectiontreatmentRE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ infectionRE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Right Eye: - Has the opacity been present since birth ? ",
-                    variable: "birthRE",
+                    "Did the CO occur after eye pain & redness due to ucler / infection/ 'phoola' in childhood?",
+                    variable: "painRE",
                     required: true,
                     lastSaved: true,
                     type: QuestionType.dropdown,
@@ -313,64 +283,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     valueRange: ["Yes", "No"]),
                 Question(
                     question:
-                        "Right Eye: - Has the opacity developed later on in childhood ? ",
-                    variable: "childhoodhistoryRE",
-                    required: true,
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Right Eye: - Did you have any childhood allergy / rash / itching / fever after which opacity developed ? ",
-                    variable: "childhoodallergyRE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ childhoodhistoryRE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Right Eye: - Did you take any treatment for it prior to the opacity ? ",
-                    variable: "childhoodallergyttRE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ childhoodallergyRE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Right Eye: - Do you have any nutritional deficiency / disorder related to eating in childhood ? ",
-                    variable: "nutritionRE",
-                    required: true,
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Right Eye: - Did you receive any treatment for the nutrional deficiency ? ",
-                    variable: "vitaminattRE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ nutritionRE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question: "Did you take immunization according to age ? ",
-                    variable: "immunisationRE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ nutritionRE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Right Eye: - Do / did you have any eyelashes rubbing against the cornea / 'Putli', any history of 'parbaal' / 'kukure' ? ",
+                        "Do / did you have any eyelashes rubbing against the cornea / 'Putli', any history of 'parbaal' / 'kukure' ? ",
                     variable: "trachomaRE",
                     required: true,
                     lastSaved: true,
@@ -378,21 +291,8 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     valueType: "Number",
                     valueRange: ["Yes", "No"]),
                 Question(
-                    question:
-                        "Right Eye: - Did you go to any doctor / take treatment for it ? ",
-                    variable: "trachomattRE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ trachomaRE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question: "Right eye: - Other specify",
+                    question: "Any Other relavant history / details related to development of CO",
                     variable: "causeOthRE",
-                    required: true,
-                    visibilityCondition: getCondition(
-                        r"${traumaRE}=2 and ${infectionRE}=2 and ${birthRE}=2 and ${childhoodhistoryRE}=2 and ${nutritionRE}=2 and ${trachomaRE}=2"),
                     lastSaved: true,
                     type: QuestionType.textfield,
                     valueType: "Number",
@@ -403,7 +303,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 Jump(
                     sectionID: 5,
                     condition: getCondition(
-                        r"${coRE}=1 or ${coLE}=1 or ${kerRE}=1 or ${ kerRE }=1")),
+                        r"${coRE}=1 or ${coLE}=1 or ${kerRE}=1 or ${ kerLE }=1")),
                 Jump(
                     sectionID: 7,
                     condition: getCondition(r"${ coLE } = 1 or ${ coRE } = 1")),
@@ -413,7 +313,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
               sectionName: "Section B - Left Eye",
               questions: [
                 Question(
-                    question: "Left eye: - Age of onset of CO",
+                    question: "Age of onset of CO",
                     variable: "coAgeLE",
                     required: true,
                     constraint: getCondition(r"${ coAgeLE } <= ${ age }"),
@@ -424,30 +324,20 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     valueRange: []),
                 Question(
                     question:
-                        "Left eye: - Did you have any injury / trauma to this eye ? ",
-                    variable: "traumaLE",
-                    required: true,
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Left eye: - Did the opacity occur after trauma to the right eye ",
+                    "Did the opacity occur after trauma to the left eye ",
                     variable: "traumacorrelationLE",
                     required: true,
-                    visibilityCondition: getCondition(r"${ traumaLE }=1"),
                     lastSaved: true,
                     type: QuestionType.dropdown,
                     valueType: "Number",
                     valueRange: ["Yes", "No"]),
                 Question(
                     question:
-                        "Left eye: - With what object did the injury occur ? ",
+                    "With what object did the injury occur ? ",
                     variable: "traumaobjectLE",
                     required: true,
                     visibilityCondition:
-                        getCondition(r"${ traumacorrelationLE }=1"),
+                    getCondition(r"${ traumacorrelationLE }=1"),
                     lastSaved: true,
                     type: QuestionType.dropdown,
                     valueType: "Number",
@@ -463,18 +353,8 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     ]),
                 Question(
                     question:
-                        "Left eye: - Did you take any treatment for the injury ? ",
-                    variable: "traumatreatmentLE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ traumacorrelationLE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Left eye: - Do you have any history of episode / s of redness / infection / keratitis / 'phoola' ? ",
-                    variable: "infectionLE",
+                    "Did the opacity occur in childhood after an episode of febrile illness with rash ? ",
+                    variable: "childhoodLE",
                     required: true,
                     lastSaved: true,
                     type: QuestionType.dropdown,
@@ -482,83 +362,17 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     valueRange: ["Yes", "No"]),
                 Question(
                     question:
-                        "Left eye: - Did you take any treatment for the infection ? ",
-                    variable: "infectiontreatmentLE",
+                    "Did the CO occur after eye pain & redness due to ucler / infection/ 'phoola' in childhood?",
+                    variable: "painLE",
                     required: true,
-                    visibilityCondition: getCondition(r"${ infectionLE }=1"),
                     lastSaved: true,
                     type: QuestionType.dropdown,
                     valueType: "Number",
                     valueRange: ["Yes", "No"]),
+
                 Question(
                     question:
-                        "Left eye: - Has the opacity been present since birth ? ",
-                    variable: "birthLE",
-                    required: true,
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Left eye: - Has the opacity developed later on in childhood ? ",
-                    variable: "childhoodhistoryLE",
-                    required: true,
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Left eye: - Did you have any childhood allergy / rash / itching / fever after which opacity developed ? ",
-                    variable: "childhoodallergyLE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ childhoodhistoryLE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Left eye: - Did you take any treatment for it prior to the opacity ? ",
-                    variable: "childhoodallergyttLE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ childhoodallergyLE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Left eye: - Do you have any nutritional deficiency / disorder related to eating in childhood ? ",
-                    variable: "nutritionLE",
-                    required: true,
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Left eye: - Did you receive any treatment for the nutrional deficiency ? ",
-                    variable: "vitaminattLE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ nutritionLE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question: "Did you take immunization according to age ? ",
-                    variable: "immunisationLE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ nutritionLE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question:
-                        "Left eye: - Do / did you have any eyelashes rubbing against the cornea / 'Putli', any history of 'parbaal' / 'kukure' ? ",
+                    "Do / did you have any eyelashes rubbing against the cornea / 'Putli', any history of 'parbaal' / 'kukure' ? ",
                     variable: "trachomaLE",
                     required: true,
                     lastSaved: true,
@@ -566,21 +380,8 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     valueType: "Number",
                     valueRange: ["Yes", "No"]),
                 Question(
-                    question:
-                        "Left eye: - Did you go to any doctor / take treatment for it ? ",
-                    variable: "trachomattLE",
-                    required: true,
-                    visibilityCondition: getCondition(r"${ trachomaLE }=1"),
-                    lastSaved: true,
-                    type: QuestionType.dropdown,
-                    valueType: "Number",
-                    valueRange: ["Yes", "No"]),
-                Question(
-                    question: "Left eye: - Other specify",
+                    question: "Any Other relavant history / details related to development of CO",
                     variable: "causeOthLE",
-                    required: true,
-                    visibilityCondition: getCondition(
-                        r"${traumaLE}=2 and ${infectionLE}=2 and ${birthLE}=2 and ${childhoodhistoryLE}=2 and ${nutritionLE}=2 and ${trachomaLE}=2"),
                     lastSaved: true,
                     type: QuestionType.textfield,
                     valueType: "Number",
@@ -590,7 +391,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 Jump(
                     sectionID: 5,
                     condition: getCondition(
-                        r"${coRE}=1 or ${coLE}=1 or ${kerRE}=1 or ${ kerRE }=1")),
+                        r"${coRE}=1 or ${coLE}=1 or ${kerRE}=1 or ${ kerLE }=1")),
                 Jump(
                     sectionID: 7,
                     condition: getCondition(r"${ coLE } = 1 or ${ coRE } = 1")),
@@ -604,11 +405,20 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 type: QuestionType.dropdown,
                 valueType: "Number",
                 valueRange: [
-                  "Can see 6/12",
-                  "Can't see 6/12 but can see 6/18",
-                  "Can't see 6/18 but can see 6/60",
-                  "Can't see 6/60 but can see 3/60",
-                  "Can't see 3/60 but can see 1/60",
+                  "6/6",
+                  "6/7.5",
+                  "6/9.5",
+                  "6/12",
+                  "6/15",
+                  "6/18",
+                  "6/24",
+                  "6/30",
+                  "6/38",
+                  "6/48",
+                  "6/60",
+                  "3/60",
+                  "Finger counting close to face",
+                  "Hand movement close to face",
                   "Light Perception (PL+)",
                   "No light perception (PL-)",
                   "Yes follows light (≤5 year of Age)",
@@ -619,17 +429,26 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 variable: "pinRE",
                 required: true,
                 visibilityCondition: getCondition(
-                    r"${ pvaRE } != 1 and ${ pvaRE } != 7 and ${ age } > 5 and ${ pvaRE } < 8"),
+                    r"${ pvaRE } != 1 and ${ pvaRE } != 2 and ${ pvaRE } != 3 and ${ pvaRE } != 4 and ${ pvaRE } != 16 and ${ age } > 5  and ${ pvaRE } < 17"),
                 constraint: getCondition(r"${ pinRE } <= ${ pvaRE }"),
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
                 valueRange: [
-                  "Can see 6/12",
-                  "Can't see 6/12 but can see 6/18",
-                  "Can't see 6/18 but can see 6/60",
-                  "Can't see 6/60 but can see 3/60",
-                  "Can't see 3/60 but can see 1/60",
+                  "6/6",
+                  "6/7.5",
+                  "6/9.5",
+                  "6/12",
+                  "6/15",
+                  "6/18",
+                  "6/24",
+                  "6/30",
+                  "6/38",
+                  "6/48",
+                  "6/60",
+                  "3/60",
+                  "Finger counting close to face",
+                  "Hand movement close to face",
                   "Light Perception (PL+)",
                   "No light perception (PL-)",
                   "Yes follows light (≤5 year of Age)",
@@ -676,7 +495,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 ]),
             Question(
                 question:
-                    "Right eye: - Did the opacity occur after the cataract surgery ? ",
+                    "Right eye: - Did the corneal opacity occur after the cataract surgery ? ",
                 variable: "cataractcorrelationRE",
                 required: true,
                 visibilityCondition: getCondition(r"${ cataractsxRE } = 1 or ${ lensRE } = 3"),
@@ -689,7 +508,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 variable: "suspectCauseRE",
                 required: true,
                 visibilityCondition:
-                    getCondition(r"${ pvaRE } = 7 or ${ pinRE } > 1"),
+                    getCondition(r"${ pinRE } > 4  and ${ age } > 5 "),
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
@@ -710,11 +529,20 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 type: QuestionType.dropdown,
                 valueType: "Number",
                 valueRange: [
-                  "Can see 6/12",
-                  "Can't see 6/12 but can see 6/18",
-                  "Can't see 6/18 but can see 6/60",
-                  "Can't see 6/60 but can see 3/60",
-                  "Can't see 3/60 but can see 1/60",
+                  "6/6",
+                  "6/7.5",
+                  "6/9.5",
+                  "6/12",
+                  "6/15",
+                  "6/18",
+                  "6/24",
+                  "6/30",
+                  "6/38",
+                  "6/48",
+                  "6/60",
+                  "3/60",
+                  "Finger counting close to face",
+                  "Hand movement close to face",
                   "Light Perception (PL+)",
                   "No light perception (PL-)",
                   "Yes follows light (≤5 year of Age)",
@@ -725,17 +553,26 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 variable: "pinLE",
                 required: true,
                 visibilityCondition: getCondition(
-                    r"${ pvaLE } != 1 and ${ pvaLE } != 7 and ${ age } > 5  and ${ pvaLE } < 8"),
+                    r"${ pvaLE } != 1 and ${ pvaLE } != 2 and ${ pvaLE } != 3 and ${ pvaLE } != 4 and ${ pvaLE } != 16 and ${ age } > 5  and ${ pvaLE } < 17"),
                 constraint: getCondition(r"${ pinLE } <= ${ pvaLE }"),
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
                 valueRange: [
-                  "Can see 6/12",
-                  "Can't see 6/12 but can see 6/18",
-                  "Can't see 6/18 but can see 6/60",
-                  "Can't see 6/60 but can see 3/60",
-                  "Can't see 3/60 but can see 1/60",
+                  "6/6",
+                  "6/7.5",
+                  "6/9.5",
+                  "6/12",
+                  "6/15",
+                  "6/18",
+                  "6/24",
+                  "6/30",
+                  "6/38",
+                  "6/48",
+                  "6/60",
+                  "3/60",
+                  "Finger counting close to face",
+                  "Hand movement close to face",
                   "Light Perception (PL+)",
                   "No light perception (PL-)",
                   "Yes follows light (≤5 year of Age)",
@@ -795,7 +632,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 variable: "suspectCauseLE",
                 required: true,
                 visibilityCondition:
-                    getCondition(r"${ pvaLE } = 7 or ${ pinLE } > 1"),
+                    getCondition(r"${ pinLE } > 4 and ${ age } > 5"),
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
@@ -830,7 +667,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     "If no, what are the barriers preventing them from availing treatment for corneal opacity",
                 variable: "varaa",
                 required: true,
-                visibilityCondition: getCondition(r"${vara} = 2"),
+                visibilityCondition: getCondition(r"${ vara } = 2"),
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
@@ -848,8 +685,8 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
             Question(
                 question: "Has Keratoplasty been advised ? ",
                 variable: "varb",
-                required: true,
                 visibilityCondition: getCondition(r"${ vara } = 1"),
+                required: true,
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
@@ -858,7 +695,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                 question: "If yes, has the patient undergone Keratoplasty ? ",
                 variable: "varba",
                 required: true,
-                visibilityCondition: getCondition(r"${ varb } = 1"),
+                visibilityCondition: getCondition(r"${ vara } = 1 and ${ varb } = 1"),
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
@@ -868,7 +705,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     "If not undergone keratoplasty,what are the barriers preventing them from availing keratoplasty services ? ",
                 variable: "varbb",
                 required: true,
-                visibilityCondition: getCondition(r"${ varba } = 2"),
+                visibilityCondition: getCondition(r"${ vara } = 1 and ${ varba } = 2"),
                 lastSaved: true,
                 type: QuestionType.dropdown,
                 valueType: "Number",
@@ -890,10 +727,10 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
           ]),
           Section(
               sectionID: 8,
-              sectionName: "Section E",
+              sectionName: "Section E - Photo",
               questions: [
                 Question(
-                    question: "Right eye:- Photo",
+                    question: "Right eye",
                     variable: "photoRE",
                     required: false,
                     lastSaved: true,
@@ -901,7 +738,7 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     valueType: "String",
                     valueRange: []),
                 Question(
-                    question: "Left eye:- Photo",
+                    question: "Left eye",
                     variable: "photoLE",
                     required: false,
                     lastSaved: true,
@@ -909,43 +746,73 @@ void testData(my_hive_interface.HiveInterface hiveInterface) {
                     valueType: "String",
                     valueRange: []),
               ],
-              jumps: [],
-              finalSection: true)
+              jumps: [
+                Jump(
+                    sectionID: 9
+                )
+              ],
+          ),
+              Section(
+              sectionID: 9,
+              sectionName: "Section - Other",
+                  questions: [
+                    Question(
+                        question: "Comments",
+                        variable: "comment",
+                        required: false,
+                        lastSaved: true,
+                        type: QuestionType.textfield,
+                        valueType: "String",
+                        valueRange: []),
+                    ],
+                  jumps: [],
+                  finalSection:true
+              )
         ],
         createAt: DateTime.now(),
         activeFrom: DateTime.now(),
         activeTill: DateTime(2024));
 
-    my_api.API.toHive.storeSurvey(hiveInterface, keratoplasty.toJson());
+    my_api.API.toFile.storeSurvey(localInterface, keratoplasty.toJson());
     surveys.add(keratoplasty);
   }
 }
 
+
+
+List<int> generateUniqueRandomIntegers(int length, int min, int max) {
+  if (length <= 0 || min >= max) {
+    throw ArgumentError('Invalid input parameters');
+  }
+
+  List<int> uniqueList = [];
+  Set<int> uniqueSet = Set<int>();
+
+  while (uniqueList.length < length) {
+    int randomNumber = Random().nextInt(max - min + 1) + min;
+    if (!uniqueSet.contains(randomNumber)) {
+      uniqueSet.add(randomNumber);
+      uniqueList.add(randomNumber);
+    }
+  }
+
+  return uniqueList;
+}
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // HIVE ENCRYPTION----------------------------------------
-  const secureStorage = FlutterSecureStorage();
 
-  final encryptionKey = await secureStorage.read(key: 'key');
-  if (encryptionKey == null) {
-    final key = Hive.generateSecureKey();
-    await secureStorage.write(
-      key: 'key',
-      value: base64Encode(key),
-    );
-  }
-  final key = await secureStorage.read(key: 'key');
-  final encryptKey = base64Url.decode(key!);
-  if (kDebugMode) {
-    print('Encryption key: $encryptKey');
-  }
-  // HIVE ENCRYPTION----------------------------------------
-
-  // HIVE INIT---------------------------------------------
-  var path = "/assets/db";
+  var path = "";
   Directory? directory;
   try {
-    directory = await getApplicationDocumentsDirectory();
+    if(Platform.isAndroid) {
+      directory = (await getExternalStorageDirectory());
+    } else {
+      directory = (await getApplicationDocumentsDirectory());
+    }
+
   } catch (err) {
     if (kDebugMode) {
       print("Cannot get download folder path");
@@ -953,37 +820,41 @@ void main() async {
   }
 
   String projectName = await Util.getProjectName();
-
   if (!Directory("${directory!.path}/$projectName").existsSync()) {
     Directory("${directory.path}/$projectName").create(recursive: true);
-  }else{
-    Directory("${directory.path}/$projectName").delete(recursive: true);
-    Directory("${directory.path}/$projectName").create(recursive: true);
   }
+
   directory = Directory("${directory.path}/$projectName");
   path = directory.path;
   if (kDebugMode) {
     print("path : $path");
   }
   //Hive.init(path);
-  await Hive.initFlutter();
-  // HIVE INIT---------------------------------------------
+  String jsonText = await rootBundle.loadString("assets/env.json");
+  final data = await json.decode(jsonText);
 
-  var userBox = await Hive.openBox('user',
-      path: path, encryptionCipher: HiveAesCipher(encryptKey));
-  var surveyBox = await Hive.openBox('survey',
-      path: path, encryptionCipher: HiveAesCipher(encryptKey));
-  var answersBox = await Hive.openBox('answers',
-      path: path, encryptionCipher: HiveAesCipher(encryptKey));
+  configuration = Configuration(data['baseurl']);
 
-  my_hive_interface.HiveInterface hiveInterface =
-      my_hive_interface.HiveInterface(collection: {
-    'user': userBox,
-    'survey': surveyBox,
-    'answers': answersBox,
-  });
+
+
+  my_hive_interface.LocalStoreInterface localInterface =
+      my_hive_interface.LocalStoreInterface(collection: [
+    'user',
+    'survey',
+    'answers',
+    'aiResult',
+  ],path:path
+      );
+
+
   try {
-    await my_api.API.fromHive.loadUser(hiveInterface);
+    surveys = my_api.API.fromFile.loadSurveys(localInterface);
+
+
+    if(surveys.isEmpty){
+      testData(localInterface);
+    }
+    my_api.API.fromFile.loadUser(localInterface);
   } catch (e, stack) {
     if (kDebugMode) {
       print(e);
@@ -991,44 +862,19 @@ void main() async {
     }
   }
 
-  File file = await File('$path/env.json')
-      .create(recursive: true, exclusive: true)
-      .then((File file) {
-    file.writeAsStringSync(json
-        .encode({"baseurl": "https://rpcapplication.aiims.edu/keratoplasty"}));
-    return file;
-  }).onError((error, stackTrace) {
-    return File('$path/env.json');
-  });
 
-  String jsonText = await file.readAsString();
-  final data = await json.decode(jsonText);
-
-  configuration = Configuration(data['baseurl']);
-/*   
-
-  my_api.API.uploadSurvey(hiveInterface: hiveInterface, survey: keratoplasty);
-  if (user.token != "") {
-    my_api.API.sync(hiveInterface: hiveInterface);
-  } else {
-  my_api.API.fromHive.loadSurveys(hiveInterface);
-  }
- */
-
-  testData(hiveInterface);
 
   if (kDebugMode) {
     print("User id : ${user.loginId}");
   }
 
-  runApp(MyApp(hiveInterface: hiveInterface));
+  runApp(MyApp(localInterface: localInterface));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key, required this.hiveInterface}) : super(key: key);
+  const MyApp({Key? key, required this.localInterface}) : super(key: key);
 
-  final my_hive_interface.HiveInterface hiveInterface;
-
+  final my_hive_interface.LocalStoreInterface localInterface;
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -1041,12 +887,12 @@ class MyApp extends StatelessWidget {
       ),
       //initialRoute: "/LoginPage",
       routes: {
-        "/LoginPage": (context) => LoginPage(hiveInterface: hiveInterface),
-        "/HomePage": (context) => HomePage(hiveInterface: hiveInterface),
+        "/LoginPage": (context) => LoginPage(hiveInterface: localInterface),
+        "/HomePage": (context) => HomePage(hiveInterface: localInterface),
       },
       home: (user.signedIn)
-          ? HomePage(hiveInterface: hiveInterface)
-          : LoginPage(hiveInterface: hiveInterface),
+          ? HomePage(hiveInterface: localInterface)
+          : LoginPage(hiveInterface: localInterface),
     );
   }
 }

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:keratoplastysurvey/api.dart' as my_api;
 import 'package:keratoplastysurvey/configuration.dart';
-import 'package:keratoplastysurvey/controller/hive_interface.dart'
+import 'package:keratoplastysurvey/controller/local_store_interface.dart'
     as my_hive_interface;
 import 'package:keratoplastysurvey/pages/home_page.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key, required this.hiveInterface});
-  final my_hive_interface.HiveInterface hiveInterface;
+  final my_hive_interface.LocalStoreInterface hiveInterface;
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -28,8 +28,8 @@ class _LoginFormState extends State<LoginForm> {
     signedin = false;
   }
 
-  Future<void> _loadRememberMe() async {
-    await my_api.API.fromHive.loadUser(widget.hiveInterface);
+  void _loadRememberMe() {
+    my_api.API.fromFile.loadUser(widget.hiveInterface);
     setState(() {
       rememberme = user.rememberMe;
     });
@@ -98,7 +98,7 @@ class _LoginFormState extends State<LoginForm> {
                   if (!RegExp(
                           r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$')
                       .hasMatch(value)) {
-                    return 'Login Id must be exactly 9 numbers';
+                    return 'Login Id must be exactly 10 characters excluding country code';
                   }
                   return null;
                 },
@@ -114,20 +114,24 @@ class _LoginFormState extends State<LoginForm> {
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
 
-                    user.token = await my_api.API.auth.login();
-                    user.rememberMe = rememberme;
-                    user.signedIn = signedin;
-                    await my_api.API.toHive.storeUser(widget.hiveInterface);
+                    final token = await my_api.API.auth.login();
 
-                    //my_api.API.sync(hiveInterface: widget.hiveInterface);
+                    if(token!="") {
+                      user.rememberMe = rememberme;
+                      user.signedIn = signedin;
+                      my_api.API.toFile.storeUser(widget.hiveInterface);
 
-                    navKey.currentState?.pushReplacement(
-                      MaterialPageRoute(
-                          settings: const RouteSettings(name: "/HomePage"),
-                          builder: (context) => HomePage(
-                                hiveInterface: widget.hiveInterface,
-                              )),
-                    );
+                      //my_api.API.sync(hiveInterface: widget.hiveInterface);
+
+                      navKey.currentState?.pushReplacement(
+                        MaterialPageRoute(
+                            settings: const RouteSettings(name: "/HomePage"),
+                            builder: (context) =>
+                                HomePage(
+                                  hiveInterface: widget.hiveInterface,
+                                )),
+                      );
+                    }
                   }
                 },
                 child: const Text('Login'),
@@ -136,45 +140,30 @@ class _LoginFormState extends State<LoginForm> {
                 height: 10.0,
               ),
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Checkbox(
-                              value: rememberme,
-                              onChanged: (value) {
-                                setState(() {
-                                  rememberme = value!;
-                                });
-                              }),
-                          const Text("Remember me")
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Checkbox(
-                              value: signedin,
-                              onChanged: (value) {
-                                setState(() {
-                                  signedin = value!;
-                                });
-                              }),
+                  Checkbox(
+                      value: rememberme,
+                      onChanged: (value) {
+                        setState(() {
+                          rememberme = value!;
+                        });
+                      }),
+                  const Text("Remember me")
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Checkbox(
+                      value: signedin,
+                      onChanged: (value) {
+                        setState(() {
+                          signedin = value!;
+                        });
+                      }),
 
-                          const Text("Keep me signed in",style: TextStyle(fontSize: 10),)
-                        ],
-                      ),
-
-                    ]),
-                  ),
-                  const Expanded(
-                      child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                      ]))
+                  const Text("Keep me signed in")
                 ],
               ),
             ]));

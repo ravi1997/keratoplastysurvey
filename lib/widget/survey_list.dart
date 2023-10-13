@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:keratoplastysurvey/configuration.dart';
-import 'package:keratoplastysurvey/controller/hive_interface.dart';
+import 'package:keratoplastysurvey/controller/local_store_interface.dart';
 import 'package:keratoplastysurvey/model.dart';
 import 'package:keratoplastysurvey/pages/survey_form_start_page.dart';
 
 class SurveyList extends StatefulWidget {
   const SurveyList(
       {super.key, required this.hiveInterface, required this.mode});
-  final HiveInterface hiveInterface;
+  final LocalStoreInterface hiveInterface;
   final SurveyPageMode mode;
 
   @override
@@ -32,7 +32,7 @@ class _SurveyListState extends State<SurveyList> {
                   settings: RouteSettings(name: "/${survey.surveyID}"),
                   builder: (context) => SurveyFormStartPage(
                       survey: survey,
-                      hiveInterface: widget.hiveInterface,
+                      fileInterface: widget.hiveInterface,
                       mode: widget.mode)),
             );
           },

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keratoplastysurvey/configuration.dart';
-import 'package:keratoplastysurvey/controller/hive_interface.dart';
+import 'package:keratoplastysurvey/controller/local_store_interface.dart';
 import 'package:keratoplastysurvey/model.dart';
 import 'package:keratoplastysurvey/widget/create_section.dart';
 import 'package:keratoplastysurvey/widget/logout_button.dart';
@@ -12,7 +12,7 @@ class SurveyFormPage extends StatefulWidget {
       required this.survey,
       required this.mode,
       this.sectionIndex});
-  final HiveInterface hiveInterface;
+  final LocalStoreInterface hiveInterface;
   final int? sectionIndex;
   final SurveyPageMode mode;
 

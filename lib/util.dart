@@ -175,11 +175,8 @@ class Condition {
     int currentC = 0;
     int current = 0;
     List<bool> stack = [];
-    print("my condition");
-    print(condition);
-    print(sequences);
 
-    if(sequences!=null){
+    if (sequences != null) {
       while (current < sequences!.length) {
         var s = sequences?[current];
 
@@ -187,7 +184,8 @@ class Condition {
           stack.add(cas![currentCA++].solve(parameters));
         } else if (s == Sequence.c) {
           stack.add(cs![currentC++].solve(parameters));
-        } else if (s == Sequence.and && sequences?[current + 1] == Sequence.ca) {
+        } else if (s == Sequence.and &&
+            sequences?[current + 1] == Sequence.ca) {
           bool left = stack.last;
           bool right = cas![currentCA++].solve(parameters);
 
@@ -215,8 +213,7 @@ class Condition {
         }
         current++;
       }
-    }
-    else{
+    } else {
       return false;
     }
     return stack.first;
